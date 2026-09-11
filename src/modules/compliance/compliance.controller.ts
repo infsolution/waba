@@ -25,10 +25,4 @@ export class ComplianceController {
   deauthorize(@Req() req: Request) {
     return this.complianceService.deauthorize(req);
   }
-
-  @Get('compliance/test')
-  testRoute() {
-    console.log('Rota de teste');
-    return 'Rota de teste';
-  }
 }

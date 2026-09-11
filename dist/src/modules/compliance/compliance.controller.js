@@ -25,10 +25,6 @@ let ComplianceController = class ComplianceController {
     deauthorize(req) {
         return this.complianceService.deauthorize(req);
     }
-    testRoute() {
-        console.log('Rota de teste');
-        return 'Rota de teste';
-    }
 };
 exports.ComplianceController = ComplianceController;
 __decorate([
@@ -47,12 +43,6 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ComplianceController.prototype, "deauthorize", null);
-__decorate([
-    (0, common_1.Get)('compliance/test'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], ComplianceController.prototype, "testRoute", null);
 exports.ComplianceController = ComplianceController = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [compliance_service_1.ComplianceService])
