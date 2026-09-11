@@ -9,5 +9,4 @@ export declare class ComplianceController {
     deauthorize(req: Request): {
         url: string;
     };
-    testRoute(): string;
 }
