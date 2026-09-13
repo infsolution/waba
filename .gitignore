@@ -1,0 +1,9 @@
+node_modules
+dist
+/generated/prisma
+.env
+.env.docker
+.kilo
+.claude
+.kilocode
+.agents
