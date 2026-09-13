@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsObject, IsArray, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsObject,
+  IsArray,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateTemplateDto {
   @IsString()
@@ -23,3 +30,4 @@ export class ListTemplatesQuery {
   @IsString()
   fields?: string;
 }
+// teste
