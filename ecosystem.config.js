@@ -1,8 +1,8 @@
 module.exports = {
   apps: [
     {
-      name: 'minha-api',
-      script: 'dist/main.js',
+      name: 'waba-api',
+      script: 'dist/src/main.js',
 
       instances: 1,
       exec_mode: 'fork',
