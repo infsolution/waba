@@ -23,5 +23,5 @@ jobs:
                   port: ${{ secrets.SERVER_PORT }}
 
                   script: |
-                      /var/www/minha-api/deploy.sh
+                      /var/www/waba-api/deploy.sh
                       echo "Deploy concluído!"
