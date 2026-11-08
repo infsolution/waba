@@ -59,7 +59,7 @@ export class MetaAuthService {
           HttpStatus.BAD_GATEWAY,
         );
       }
-
+      console.log('Token da meta' + shortLivedToken.substring(0, 8));
       // PASSO 2: short-lived -> long-lived (AQUI sim usa fb_exchange_token)
       const longTokenRes = await this.httpService
         .get(
@@ -76,9 +76,11 @@ export class MetaAuthService {
         .toPromise();
 
       const accessToken = longTokenRes.data.access_token;
-
+      console.log('Access Token da meta' + accessToken.substring(0, 8));
       /// PASSO 3: descobrir o WABA real
       let wabaId = dto.waba_id;
+
+      console.log('WABA ID ' + wabaId);
       if (!wabaId) {
         // 1. Lista os businesses do usuário - SEM o campo de WABA aqui
         const businessesRes = await this.httpService
@@ -108,7 +110,9 @@ export class MetaAuthService {
           }
         }
       }
+
       if (!wabaId) {
+        console.log('NAO TEM WABA ID ' + wabaId);
         throw new HttpException(
           'Nenhuma conta WhatsApp encontrada após signup',
           HttpStatus.BAD_GATEWAY,
@@ -116,6 +120,7 @@ export class MetaAuthService {
       }
 
       // PASSO 4: buscar os números desse WABA
+      console.log('PASSO 4 ');
       const wabaRes = await this.httpService
         .get(`https://graph.facebook.com/${graphApiVersion}/${wabaId}`, {
           params: {
@@ -128,11 +133,12 @@ export class MetaAuthService {
 
       const phoneNumbers = wabaRes.data.phone_numbers?.data || [];
       const phoneNumberId = phoneNumbers[0]?.id || null;
-
+      console.log('DATA FONE ' + phoneNumbers);
       const encrypted = this.aesService.encrypt(
         accessToken,
         this.configService.get<string>('encryption.key'),
       );
+      console.log('ENCRYPT ');
 
       await this.prismaService.whatsappAccount.upsert({
         where: { wabaId },
@@ -150,6 +156,7 @@ export class MetaAuthService {
           phoneNumbers: phoneNumbers as any,
         },
       });
+      console.log('POS ENCRYPT');
 
       return {
         success: true,
