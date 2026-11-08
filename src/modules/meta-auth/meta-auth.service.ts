@@ -78,16 +78,29 @@ export class MetaAuthService {
       const accessToken = longTokenRes.data.access_token;
 
       // PASSO 3: descobrir o WABA real, não confiar no dto.waba_id
-      const wabaListRes = await this.httpService
-        .get(
-          `https://graph.facebook.com/${graphApiVersion}/me/whatsapp_business_accounts`,
-          {
-            params: { access_token: accessToken },
+      // User -> Businesses -> WABAs
+      const businessesRes = await this.httpService
+        .get(`https://graph.facebook.com/${graphApiVersion}/me/businesses`, {
+          params: {
+            fields: 'id,name,whatsapp_business_accounts{id,name}',
+            access_token: accessToken,
           },
-        )
+        })
         .toPromise();
 
-      const wabaId = wabaListRes.data?.data?.[0]?.id;
+      const businesses = businessesRes.data?.data || [];
+
+      // Junta todos os WABAs de todos os businesses do usuário
+      const allWabas = businesses.flatMap(
+        (b: any) => b.whatsapp_business_accounts?.data || [],
+      );
+
+      // Se o frontend mandou um waba_id, prefere ele. Se não, pega o primeiro.
+      const wabaId =
+        dto.waba_id && allWabas.some((w: any) => w.id === dto.waba_id)
+          ? dto.waba_id
+          : allWabas[0]?.id;
+
       if (!wabaId) {
         throw new HttpException(
           'Nenhuma conta WhatsApp encontrada após signup',
@@ -98,7 +111,11 @@ export class MetaAuthService {
       // PASSO 4: buscar os números desse WABA
       const wabaRes = await this.httpService
         .get(`https://graph.facebook.com/${graphApiVersion}/${wabaId}`, {
-          params: { fields: 'phone_numbers', access_token: accessToken },
+          params: {
+            fields:
+              'id,name,phone_numbers{id,display_phone_number,verified_name,quality_rating,code_verification_status}',
+            access_token: accessToken,
+          },
         })
         .toPromise();
 
