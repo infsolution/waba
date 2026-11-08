@@ -77,30 +77,37 @@ export class MetaAuthService {
 
       const accessToken = longTokenRes.data.access_token;
 
-      // PASSO 3: descobrir o WABA real, não confiar no dto.waba_id
-      // User -> Businesses -> WABAs
-      const businessesRes = await this.httpService
-        .get(`https://graph.facebook.com/${graphApiVersion}/me/businesses`, {
-          params: {
-            fields: 'id,name,whatsapp_business_accounts{id,name}',
-            access_token: accessToken,
-          },
-        })
-        .toPromise();
-
-      const businesses = businessesRes.data?.data || [];
-
-      // Junta todos os WABAs de todos os businesses do usuário
-      const allWabas = businesses.flatMap(
-        (b: any) => b.whatsapp_business_accounts?.data || [],
-      );
-
-      // Se o frontend mandou um waba_id, prefere ele. Se não, pega o primeiro.
-      const wabaId =
-        dto.waba_id && allWabas.some((w: any) => w.id === dto.waba_id)
-          ? dto.waba_id
-          : allWabas[0]?.id;
-
+      /// PASSO 3: descobrir o WABA real
+      let wabaId = dto.waba_id;
+      if (!wabaId) {
+        // 1. Lista os businesses do usuário - SEM o campo de WABA aqui
+        const businessesRes = await this.httpService
+          .get(`https://graph.facebook.com/${graphApiVersion}/me/businesses`, {
+            params: {
+              fields: 'id,name',
+              access_token: accessToken,
+            },
+          })
+          .toPromise();
+        const businesses = businessesRes.data?.data || [];
+        console.log('[exchangeCode] businesses:', JSON.stringify(businesses));
+        // 2. Para cada business, busca os WABAs no EDGE correto
+        for (const business of businesses) {
+          const ownedRes = await this.httpService
+            .get(
+              `https://graph.facebook.com/${graphApiVersion}/${business.id}/owned_whatsapp_business_accounts`,
+              {
+                params: { access_token: accessToken },
+              },
+            )
+            .toPromise();
+          const wabas = ownedRes.data?.data || [];
+          if (wabas.length > 0) {
+            wabaId = wabas[0].id;
+            break;
+          }
+        }
+      }
       if (!wabaId) {
         throw new HttpException(
           'Nenhuma conta WhatsApp encontrada após signup',
