@@ -29,6 +29,14 @@ export class MetaAuthService {
     }
 
     try {
+      console.log(
+        '[DEBUG] appId:',
+        appId,
+        '| secret existe?',
+        !!appSecret,
+        '| code inicio:',
+        dto.code?.substring(0, 8),
+      );
       // PASSO 1: code -> short-lived user token
       // Aqui é GET, com `code`, NÃO é fb_exchange_token
       const shortTokenRes = await this.httpService
