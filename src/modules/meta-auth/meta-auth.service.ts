@@ -18,53 +18,92 @@ export class MetaAuthService {
   async exchangeCode(dto: ExchangeCodeDto) {
     const appId = this.configService.get<string>('meta.appId');
     const appSecret = this.configService.get<string>('meta.appSecret');
-    const graphApiVersion = this.configService.get<string>('meta.graphApiVersion') || 'v21.0';
+    const graphApiVersion =
+      this.configService.get<string>('meta.graphApiVersion') || 'v21.0';
 
     if (!appId || !appSecret) {
-      throw new HttpException('APP_ID e APP_SECRET são obrigatórios', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'APP_ID e APP_SECRET são obrigatórios',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
 
-    const accessTokenUrl = `https://graph.facebook.com/${graphApiVersion}/oauth/access_token`;
-    const params = new URLSearchParams({
-      grant_type: 'fb_exchange_token',
-      client_id: appId,
-      client_secret: appSecret,
-      fb_exchange_token: dto.code,
-    });
-
     try {
-      const tokenResponse = await this.httpService
-        .post(accessTokenUrl, params, {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      // PASSO 1: code -> short-lived user token
+      // Aqui é GET, com `code`, NÃO é fb_exchange_token
+      const shortTokenRes = await this.httpService
+        .get(
+          `https://graph.facebook.com/${graphApiVersion}/oauth/access_token`,
+          {
+            params: {
+              client_id: appId,
+              client_secret: appSecret,
+              code: dto.code,
+            },
+          },
+        )
+        .toPromise();
+
+      const shortLivedToken = shortTokenRes.data.access_token;
+      if (!shortLivedToken) {
+        throw new HttpException(
+          'Token de acesso não retornado pelo Meta',
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+
+      // PASSO 2: short-lived -> long-lived (AQUI sim usa fb_exchange_token)
+      const longTokenRes = await this.httpService
+        .get(
+          `https://graph.facebook.com/${graphApiVersion}/oauth/access_token`,
+          {
+            params: {
+              grant_type: 'fb_exchange_token',
+              client_id: appId,
+              client_secret: appSecret,
+              fb_exchange_token: shortLivedToken, // aqui vai TOKEN, não code
+            },
+          },
+        )
+        .toPromise();
+
+      const accessToken = longTokenRes.data.access_token;
+
+      // PASSO 3: descobrir o WABA real, não confiar no dto.waba_id
+      const wabaListRes = await this.httpService
+        .get(
+          `https://graph.facebook.com/${graphApiVersion}/me/whatsapp_business_accounts`,
+          {
+            params: { access_token: accessToken },
+          },
+        )
+        .toPromise();
+
+      const wabaId = wabaListRes.data?.data?.[0]?.id;
+      if (!wabaId) {
+        throw new HttpException(
+          'Nenhuma conta WhatsApp encontrada após signup',
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+
+      // PASSO 4: buscar os números desse WABA
+      const wabaRes = await this.httpService
+        .get(`https://graph.facebook.com/${graphApiVersion}/${wabaId}`, {
+          params: { fields: 'phone_numbers', access_token: accessToken },
         })
         .toPromise();
 
-      const accessToken = tokenResponse.data.access_token;
+      const phoneNumbers = wabaRes.data.phone_numbers?.data || [];
+      const phoneNumberId = phoneNumbers[0]?.id || null;
 
-      if (!accessToken) {
-        throw new HttpException('Token de acesso não retornado pelo Meta', HttpStatus.BAD_GATEWAY);
-      }
-
-      const wabaId = dto.waba_id;
-      let phoneNumbers = null;
-
-      if (wabaId) {
-        const wabaResponse = await this.httpService
-          .get(`https://graph.facebook.com/${graphApiVersion}/${wabaId}`, {
-            params: {
-              fields: 'phone_numbers',
-              access_token: accessToken,
-            },
-          })
-          .toPromise();
-
-        phoneNumbers = wabaResponse.data.phone_numbers || null;
-      }
-
-      const encrypted = this.aesService.encrypt(accessToken, this.configService.get<string>('encryption.key'));
+      const encrypted = this.aesService.encrypt(
+        accessToken,
+        this.configService.get<string>('encryption.key'),
+      );
 
       await this.prismaService.whatsappAccount.upsert({
-        where: { wabaId: wabaId || crypto.randomUUID() },
+        where: { wabaId },
         update: {
           userAccessToken: encrypted.ciphertext,
           tokenIv: encrypted.iv,
@@ -72,7 +111,7 @@ export class MetaAuthService {
           phoneNumbers: phoneNumbers as any,
         },
         create: {
-          wabaId: wabaId || crypto.randomUUID(),
+          wabaId,
           userAccessToken: encrypted.ciphertext,
           tokenIv: encrypted.iv,
           tokenAuthTag: encrypted.authTag,
@@ -83,10 +122,17 @@ export class MetaAuthService {
       return {
         success: true,
         waba_id: wabaId,
+        phone_number_id: phoneNumberId, // agora seu frontend recebe o que ele espera
         phone_numbers: phoneNumbers,
       };
     } catch (error) {
-      const message = error?.response?.data?.error?.message || 'Erro ao comunicar com Meta';
+      const message =
+        error?.response?.data?.error?.message || 'Erro ao comunicar com Meta';
+      // Loga o erro FULL no backend pra não ficar cego de novo
+      console.log(
+        '[exchangeCode] Meta error:',
+        JSON.stringify(error?.response?.data, null, 2),
+      );
       throw new HttpException(message, HttpStatus.BAD_GATEWAY);
     }
   }
