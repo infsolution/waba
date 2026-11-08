@@ -37,6 +37,7 @@ export class MetaAuthService {
         '| code inicio:',
         dto.code?.substring(0, 8),
       );
+      console.log('ANTES DO TOKEN');
       // PASSO 1: code -> short-lived user token
       // Aqui é GET, com `code`, NÃO é fb_exchange_token
       const shortTokenRes = await this.httpService
@@ -51,7 +52,7 @@ export class MetaAuthService {
           },
         )
         .toPromise();
-
+      console.log('DEPOIS DO TOKEN - NÃO CHEGA AQUI');
       const shortLivedToken = shortTokenRes.data.access_token;
       if (!shortLivedToken) {
         throw new HttpException(
