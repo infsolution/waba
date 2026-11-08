@@ -23,24 +23,5 @@ jobs:
                   port: ${{ secrets.SERVER_PORT }}
 
                   script: |
-                      set -e
-
-                      cd ${{ secrets.APP_PATH }}
-
-                      echo "Atualizando código..."
-                      git fetch origin main
-                      git reset --hard origin/main
-
-                      echo "Instalando dependências..."
-                      npm ci
-
-                      echo "Prisma Generate..."
-                      npx prisma generate
-
-                      echo "Gerando build..."
-                      npm run build
-
-                      echo "Reiniciando aplicação..."
-                      pm2 reload waba-api
-
+                      /var/www/minha-api/deploy.sh
                       echo "Deploy concluído!"
