@@ -22,16 +22,16 @@ git fetch origin main
 git reset --hard origin/main
 
 echo "==> Instalando dependências"
-# Limpa o bloqueio de install-scripts que estava matando o 【entity-Prisma¦canonical_name=Prisma】 e o bcrypt
-# Se você usa .npmrc com allowScripts, isso aqui garante que o 【entity-Prisma¦canonical_name=Prisma】 rode
+# Limpa o bloqueio de install-scripts que estava matando o prisma e o bcrypt
+# Se você usa .npmrc com allowScripts, isso aqui garante que o prisma rode
 npm ci
 
-echo "==> Gerando 【entity-Prisma¦canonical_name=Prisma】 Client (OBRIGATÓRIO)"
-npx 【entity-prisma¦canonical_name=Prisma】 generate
+echo "==> Gerando prisma Client (OBRIGATÓRIO)"
+npx  generate
 
 echo "==> Rodando migrations (se houver)"
 # Se você não usa migrate em produção, pode comentar essa linha
-# Mas NÃO rode '【entity-prisma¦canonical_name=Prisma】 db push' em produção
+# Mas NÃO rode ' db push' em produção
 npx prisma migrate deploy || echo "⚠️ Nenhuma migration pendente ou erro ao aplicar - verifique"
 
 echo "==> Build - se falhar aqui, o deploy PARA e não reinicia o PM2"
