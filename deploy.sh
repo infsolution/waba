@@ -38,8 +38,8 @@ echo "==> Build - se falhar aqui, o deploy PARA e não reinicia o PM2"
 npm run build
 
 # Validação extra: garante que o dist foi gerado de verdade
-if [ ! -f "dist/main.js" ]; then
-  echo "❌ ERRO: dist/main.js não foi gerado. Abortando deploy."
+if [ ! -f "dist/src/main.js" ]; then
+  echo "❌ ERRO: dist/src/main.js não foi gerado. Abortando deploy."
   exit 1
 fi
 
