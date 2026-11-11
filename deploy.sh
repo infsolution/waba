@@ -8,9 +8,10 @@ BACKUP_BASE="/home/cicero/backups/waba-api"
 BACKUP_SUFIX="$(date +%Y%m%d-%H%M%S)"
 BACKUP_DIR="$BACKUP_BASE/dist-$BACKUP_SUFIX"
 
+echo "==> Entrar no document root"
 cd "$APP_DIR"
 
-echo "==> Backup do dist atual (para rollback rápido)"
+echo "==> Backup do dist atual no user (para rollback rápido)"
 if [ -d "dist" ]; then
   cp -r dist "$BACKUP_DIR"
   echo "Backup em: $BACKUP_DIR"
