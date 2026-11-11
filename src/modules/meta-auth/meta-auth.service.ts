@@ -78,6 +78,19 @@ export class MetaAuthService {
 
       const accessToken = longTokenRes.data.access_token;
       console.log('Access Token da meta' + accessToken.substring(0, 8));
+      const debugRes = await this.httpService
+        .get(`https://graph.facebook.com/${graphApiVersion}/debug_token`, {
+          params: {
+            input_token: accessToken,
+            access_token: `${appId}|${appSecret}`,
+          },
+        })
+        .toPromise();
+      console.log(
+        '[exchangeCode] scopes:',
+        JSON.stringify(debugRes.data?.data?.scopes),
+      );
+      console.log('[exchangeCode] user_id:', debugRes.data?.data?.user_id);
       /// PASSO 3: descobrir o WABA real
       let wabaId = dto.waba_id;
 
@@ -166,9 +179,13 @@ export class MetaAuthService {
         phone_numbers: phoneNumbers,
       };
     } catch (error) {
+      // Se foi um erro nosso (HttpException), só repassa
+      if (error instanceof HttpException) {
+        console.log('[exchangeCode] Nosso erro:', error.message);
+        throw error;
+      }
       const message =
         error?.response?.data?.error?.message || 'Erro ao comunicar com Meta';
-      // Loga o erro FULL no backend pra não ficar cego de novo
       console.log(
         '[exchangeCode] Meta error:',
         JSON.stringify(error?.response?.data, null, 2),

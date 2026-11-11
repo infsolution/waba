@@ -8,4 +8,8 @@ export class ExchangeCodeDto {
   @IsString()
   @IsOptional()
   waba_id?: string;
+
+  @IsString()
+  @IsOptional()
+  phone_number_id?: string;
 }
