@@ -5,10 +5,16 @@ on:
         branches:
             - main
 
+# Evita 2 deploys ao mesmo tempo se você der push 2x rápido
+concurrency:
+    group: deploy-waba-api
+    cancel-in-progress: false
+
 jobs:
     deploy:
         name: Deploy to VPS
         runs-on: ubuntu-latest
+        timeout-minutes: 10
 
         steps:
             - name: Checkout
@@ -21,7 +27,6 @@ jobs:
                   username: ${{ secrets.SERVER_USER }}
                   key: ${{ secrets.SERVER_SSH_KEY }}
                   port: ${{ secrets.SERVER_PORT }}
-
+                  # Se o script falhar, o Action FALHA também. Sem esse echo mentiroso de "concluído"
                   script: |
                       bash /var/www/waba-api/deploy.sh
-                      echo "Deploy concluído!"
