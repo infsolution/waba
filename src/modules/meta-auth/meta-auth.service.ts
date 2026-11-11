@@ -52,7 +52,7 @@ export class MetaAuthService {
           },
         )
         .toPromise();
-      console.log('DEPOIS DO TOKEN - NÃO CHEGA AQUI');
+      console.log('DEPOIS DO TOKEN - OK');
       const shortLivedToken = shortTokenRes.data.access_token;
       if (!shortLivedToken) {
         throw new HttpException(
@@ -91,47 +91,83 @@ export class MetaAuthService {
         JSON.stringify(debugRes.data?.data?.scopes),
       );
       console.log('[exchangeCode] user_id:', debugRes.data?.data?.user_id);
-      /// PASSO 3: descobrir o WABA real
-      let wabaId = dto.waba_id;
 
-      console.log('WABA ID ' + wabaId);
+      // ============================================================
+      // PASSO 3: descobrir o WABA real - CORRIGIDO
+      // Ordem: 1) dto.waba_id -> 2) dto.business_id -> 3) /me/businesses
+      // ============================================================
+      let wabaId = dto.waba_id;
+      const businessIdFromDto = (dto as any).business_id;
+
+      console.log(
+        'WABA ID dto:',
+        wabaId,
+        '| business_id dto:',
+        businessIdFromDto,
+      );
+
+      // Tentativa 2: veio business_id do frontend, usa ele direto.
+      // Não lista /me/businesses.
+      if (!wabaId && businessIdFromDto) {
+        console.log(
+          '[exchangeCode] Tentativa 2 - buscando WABA via business_id:',
+          businessIdFromDto,
+        );
+        const ownedRes = await this.httpService
+          .get(
+            `https://graph.facebook.com/${graphApiVersion}/${businessIdFromDto}/owned_whatsapp_business_accounts`,
+            {
+              params: { access_token: accessToken },
+            },
+          )
+          .toPromise();
+        const wabas = ownedRes.data?.data || [];
+        console.log('[exchangeCode] WABAs do business:', JSON.stringify(wabas));
+        if (wabas.length > 0) {
+          wabaId = wabas[0].id;
+        }
+      }
+
+      // Tentativa 3: último recurso - lista businesses
+      // DIFERENTE do código antigo: já pede o campo de WABA embutido,
+      // em 1 chamada só, sem loop de 2 chamadas.
       if (!wabaId) {
-        // 1. Lista os businesses do usuário - SEM o campo de WABA aqui
+        console.log('[exchangeCode] Tentativa 3 - listando /me/businesses');
         const businessesRes = await this.httpService
           .get(`https://graph.facebook.com/${graphApiVersion}/me/businesses`, {
             params: {
-              fields: 'id,name',
+              fields: 'id,name,owned_whatsapp_business_accounts{id,name}',
               access_token: accessToken,
             },
           })
           .toPromise();
         const businesses = businessesRes.data?.data || [];
-        console.log('[exchangeCode] businesses:', JSON.stringify(businesses));
-        // 2. Para cada business, busca os WABAs no EDGE correto
+        console.log(
+          '[exchangeCode] businesses com WABA:',
+          JSON.stringify(businesses),
+        );
         for (const business of businesses) {
-          const ownedRes = await this.httpService
-            .get(
-              `https://graph.facebook.com/${graphApiVersion}/${business.id}/owned_whatsapp_business_accounts`,
-              {
-                params: { access_token: accessToken },
-              },
-            )
-            .toPromise();
-          const wabas = ownedRes.data?.data || [];
+          const wabas = business.owned_whatsapp_business_accounts?.data || [];
           if (wabas.length > 0) {
             wabaId = wabas[0].id;
+            console.log('[exchangeCode] WABA achado via businesses:', wabaId);
             break;
           }
         }
       }
 
       if (!wabaId) {
-        console.log('NAO TEM WABA ID ' + wabaId);
+        console.log(
+          'NAO TEM WABA ID. business_id recebido:',
+          businessIdFromDto,
+        );
         throw new HttpException(
-          'Nenhuma conta WhatsApp encontrada após signup',
+          'Signup concluído, mas WABA não encontrada via API. Verifique o log [FB] message recebida no frontend.',
           HttpStatus.BAD_GATEWAY,
         );
       }
+
+      console.log('[exchangeCode] WABA final:', wabaId);
 
       // PASSO 4: buscar os números desse WABA
       console.log('PASSO 4 ');
