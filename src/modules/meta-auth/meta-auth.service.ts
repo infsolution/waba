@@ -36,6 +36,7 @@ export class MetaAuthService {
         !!appSecret,
         '| code inicio:',
         dto.code?.substring(0, 8),
+        'Teste deploy completo',
       );
       console.log('ANTES DO TOKEN');
       // PASSO 1: code -> short-lived user token
