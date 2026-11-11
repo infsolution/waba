@@ -4,14 +4,16 @@ set -euo pipefail
 APP_DIR="/var/www/waba-api"
 APP_NAME="waba-api"
 HEALTH_URL="http://localhost:3000/health" # <-- TROCA PELA SUA PORTA / ROTA DE HEALTH
-BACKUP_DIR="/var/www/waba-api-backup-$(date +%Y%m%d-%H%M%S)"
+BACKUP_BASE="/home/cicero/backups/waba-api"
+BACKUP_SUFIX="$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="$BACKUP_BASE/dist-$BACKUP_SUFIX"
 
 cd "$APP_DIR"
 
 echo "==> Backup do dist atual (para rollback rápido)"
 if [ -d "dist" ]; then
-  cp -r dist "$BACKUP_DIR-dist"
-  echo "Backup em: $BACKUP_DIR-dist"
+  cp -r dist "$BACKUP_DIR"
+  echo "Backup em: $BACKUP_DIR"
 fi
 
 echo "==> Atualizando código"
@@ -59,9 +61,9 @@ for i in {1..10}; do
 done
 
 echo "❌ Healthcheck falhou após 30s. Fazendo rollback..."
-if [ -d "$BACKUP_DIR-dist" ]; then
+if [ -d "$BACKUP_DIR" ]; then
   rm -rf dist
-  cp -r "$BACKUP_DIR-dist" dist
+  cp -r "$BACKUP_DIR-" dist
   pm2 reload "$APP_NAME" --update-env
   echo "Rollback feito para o dist anterior."
 fi
