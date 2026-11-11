@@ -4,7 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { ExchangeCodeDto } from './dto/exchange-code.dto';
 import { PrismaService } from '../../config/prisma.service';
 import { Aes256GcmService } from '../../common/encryption/aes-256-gcm.service';
-import * as crypto from 'crypto';
+// import * as crypto from 'crypto';
 
 @Injectable()
 export class MetaAuthService {

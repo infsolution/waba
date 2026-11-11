@@ -12,4 +12,7 @@ export class ExchangeCodeDto {
   @IsString()
   @IsOptional()
   phone_number_id?: string;
+  @IsString()
+  @IsOptional()
+  business_id?: string;
 }
