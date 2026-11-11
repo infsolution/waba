@@ -27,7 +27,7 @@ echo "==> Instalando dependências"
 npm ci
 
 echo "==> Gerando prisma Client (OBRIGATÓRIO)"
-npx  generate
+npx  prisma generate
 
 echo "==> Rodando migrations (se houver)"
 # Se você não usa migrate em produção, pode comentar essa linha
